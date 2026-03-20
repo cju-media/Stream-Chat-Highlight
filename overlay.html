@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { background: transparent; margin: 0; overflow: hidden; font-family: 'Inter', sans-serif; height: 100vh; width: 100vw; }
+        #highlight {
+            position: absolute; bottom: 40px; right: 40px;
+            background: rgba(24, 24, 27, 0.95); color: #efeff1; padding: 25px 35px;
+            border-radius: 8px; max-width: 70%; font-size: 42px; line-height: 1.2;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6); border-left: 12px solid #9147ff;
+            opacity: 0; transform: translateY(20px); transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+        #highlight.visible { opacity: 1; transform: translateY(0); }
+        .badge { height: 42px; width: auto; vertical-align: middle; margin-right: 12px; border-radius: 4px; }
+        .username { font-weight: 700; margin-right: 15px; vertical-align: middle; }
+        .emote { height: 1.2em; vertical-align: middle; margin: 0 5px; }
+    </style>
+</head>
+<body>
+    <div id="highlight"></div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let globalEmoteMap = {}, globalBadgeMap = {};
+        const box = document.getElementById('highlight');
+
+        socket.on('init-assets', (data) => { globalEmoteMap = data.emotes; globalBadgeMap = data.badges; });
+
+        function getBadgesHtml(userBadges) {
+            let html = '';
+            if (!userBadges || !globalBadgeMap) return '';
+            Object.keys(userBadges).forEach(type => {
+                const ver = userBadges[type];
+                if (globalBadgeMap[type] && globalBadgeMap[type].versions[ver]) {
+                    html += `<img src="${globalBadgeMap[type].versions[ver].image_url_4x}" class="badge">`;
+                }
+            });
+            return html;
+        }
+
+        function parse(text, twitchEmotes) {
+            const twitchMap = {};
+            if (twitchEmotes) {
+                Object.keys(twitchEmotes).forEach(id => {
+                    twitchEmotes[id].forEach(range => {
+                        const [s, e] = range.split('-').map(Number);
+                        twitchMap[text.substring(s, e + 1)] = `https://static-cdn.jtvnw.net/emoticons/v2/${id}/default/dark/3.0`;
+                    });
+                });
+            }
+            return text.split(' ').map(word => {
+                if (twitchMap[word]) return `<img src="${twitchMap[word]}" class="emote">`;
+                if (globalEmoteMap[word]) return `<img src="${globalEmoteMap[word]}" class="emote">`;
+                return word;
+            }).join(' ');
+        }
+
+        socket.on('show-feature', (data) => {
+            box.innerHTML = `${getBadgesHtml(data.badges)}<span class="username" style="color:${data.color}">${data.user}:</span><span>${parse(data.text, data.emotes)}</span>`;
+            box.classList.add('visible');
+        });
+
+        socket.on('clear-overlay', () => { box.classList.remove('visible'); });
+    </script>
+</body>
+</html>

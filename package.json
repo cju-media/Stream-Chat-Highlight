@@ -1,0 +1,22 @@
+{
+  "name": "twitch-chat-display",
+  "version": "1.0.0",
+  "main": "server.js",
+  "bin": "server.js",
+  "pkg": {
+    "assets": [
+      "dashboard.html",
+      "overlay.html"
+    ],
+    "targets": [
+      "node18-macos-x64",
+      "node18-win-x64"
+    ]
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "pkg": "^5.8.1",
+    "socket.io": "^4.7.2",
+    "tmi.js": "^1.8.5"
+  }
+}

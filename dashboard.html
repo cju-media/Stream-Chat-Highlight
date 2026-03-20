@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { background: #0e0e10; color: #efeff1; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
+        .header { position: sticky; top: 0; background: #18181b; padding: 15px 20px; border-bottom: 2px solid #9147ff; z-index: 10; display: flex; align-items: center; justify-content: space-between; }
+        .channel-controls { display: flex; gap: 10px; }
+        input { background: #000; color: #fff; border: 1px solid #333; padding: 8px; border-radius: 4px; outline: none; }
+        input:focus { border-color: #9147ff; }
+        button { padding: 8px 16px; background: #9147ff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .clear-btn { background: #eb0400; }
+        #chat-log { padding: 10px; }
+        .msg { padding: 10px; cursor: pointer; border-bottom: 1px solid #1f1f23; transition: background 0.1s; }
+        .msg:hover { background: #1f1f23; }
+        .username { font-weight: 700; margin-right: 8px; }
+        .badge { height: 18px; width: auto; vertical-align: middle; margin-right: 4px; border-radius: 2px; }
+        .emote { height: 24px; vertical-align: middle; margin: 0 2px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="channel-controls">
+            <input id="channelInput" type="text" placeholder="Channel Name">
+            <button onclick="updateChannel()">SET</button>
+        </div>
+        <button class="clear-btn" onclick="socket.emit('clear-msg')">CLEAR OVERLAY</button>
+    </div>
+    <div id="chat-log"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let globalEmoteMap = {}, globalBadgeMap = {};
+
+        const channelInput = document.getElementById('channelInput');
+
+        // Added: Press Enter to Update
+        channelInput.addEventListener("keypress", (event) => {
+            if (event.key === "Enter") {
+                updateChannel();
+            }
+        });
+
+        socket.on('current-channel', (name) => { channelInput.value = name; });
+        socket.on('init-assets', (data) => { globalEmoteMap = data.emotes; globalBadgeMap = data.badges; });
+
+        function updateChannel() {
+            const name = channelInput.value.trim();
+            if (name) { 
+                socket.emit('change-channel', name); 
+                document.getElementById('chat-log').innerHTML = ''; 
+                channelInput.blur(); // Remove focus after updating
+            }
+        }
+
+        function getBadgesHtml(userBadges) {
+            let html = '';
+            if (!userBadges || !globalBadgeMap) return '';
+            Object.keys(userBadges).forEach(type => {
+                const ver = userBadges[type];
+                if (globalBadgeMap[type] && globalBadgeMap[type].versions[ver]) {
+                    html += `<img src="${globalBadgeMap[type].versions[ver].image_url_1x}" class="badge">`;
+                }
+            });
+            return html;
+        }
+
+        function parse(text, twitchEmotes) {
+            const twitchMap = {};
+            if (twitchEmotes) {
+                Object.keys(twitchEmotes).forEach(id => {
+                    twitchEmotes[id].forEach(range => {
+                        const [s, e] = range.split('-').map(Number);
+                        twitchMap[text.substring(s, e + 1)] = `https://static-cdn.jtvnw.net/emoticons/v2/${id}/default/dark/2.0`;
+                    });
+                });
+            }
+            return text.split(' ').map(word => {
+                if (twitchMap[word]) return `<img src="${twitchMap[word]}" class="emote">`;
+                if (globalEmoteMap[word]) return `<img src="${globalEmoteMap[word]}" class="emote">`;
+                return word.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+            }).join(' ');
+        }
+
+        socket.on('new-message', (data) => {
+            const div = document.createElement('div');
+            div.className = 'msg';
+            div.innerHTML = `${getBadgesHtml(data.badges)}<span class="username" style="color:${data.color}">${data.user}:</span><span>${parse(data.text, data.emotes)}</span>`;
+            div.onclick = () => socket.emit('feature-msg', data);
+            document.getElementById('chat-log').prepend(div);
+        });
+    </script>
+</body>
+</html>
