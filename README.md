@@ -1,4 +1,4 @@
-# Twitch Chat Highlight
+# Stream Chat Highlight
 
 A lightweight, standalone chat featuring tool for Twitch streamers. Highlight specific chat messages on your stream with full support for Twitch, 7TV, and BTTV emotes, as well as official chatter badges.
 
