@@ -1,5 +1,5 @@
 {
-  "name": "twitch-chat-highlight",
+  "name": "stream-chat-highlight",
   "version": "1.0.0",
   "main": "server.js",
   "bin": "server.js",
