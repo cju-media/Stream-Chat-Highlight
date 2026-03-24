@@ -83,7 +83,7 @@
             </select>
             <button class="btn-clear-gray" onclick="clearLog()">Clear Log</button>
         </div>
-        <button id="clearOverlayBtn" class="btn-clear-red" onclick="socket.emit('clear-msg')">Clear Overlay</button>
+        <button id="clearOverlayBtn" class="btn-clear-red" onclick="clearFocus(); socket.emit('clear-msg');">Clear Overlay</button>
     </div>
 
     <div id="dashboard" class="dashboard-container">

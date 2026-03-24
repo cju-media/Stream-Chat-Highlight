@@ -1,0 +1,7 @@
+Twitch: Connecting to #xqc...
+(node:304112) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+--- Dashboard Ready: http://localhost:3000 ---
+
+✅ Twitch: Successfully joined #xqc
