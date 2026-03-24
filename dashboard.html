@@ -59,6 +59,11 @@
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
 
         /* MODAL */
+        /* FILTERING */
+        body[data-filter="twitch"] .msg[data-platform="youtube"] { display: none !important; }
+        body[data-filter="youtube"] .msg[data-platform="twitch"] { display: none !important; }
+
+        /* MODAL */
         #configModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 1000; }
         .modal-content { background: #18181b; padding: 25px; border-radius: 8px; border: 1px solid #9147ff; width: 320px; display: flex; flex-direction: column; gap: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .modal-content h2 { margin: 0; font-size: 16px; color: #fff; }
@@ -174,13 +179,18 @@
 
         socket.on('init-assets', (d) => { globalEmoteMap = d.emotes || {}; });
 
-        socket.on('new-message', (data) => {
-            if (siteFilter.value !== 'all' && data.platform !== siteFilter.value) return;
+        // Initialize filter
+        document.body.setAttribute('data-filter', siteFilter.value);
+        siteFilter.addEventListener('change', (e) => {
+            document.body.setAttribute('data-filter', e.target.value);
+        });
 
+        socket.on('new-message', (data) => {
             const msgHtml = `<span class="platform-tag tag-${data.platform}">${data.platform[0]}</span><span class="username" style="color:${data.color}">${data.user}:</span><span>${parseMessage(data)}</span>`;
             
             const div = document.createElement('div');
             div.className = 'msg';
+            div.setAttribute('data-platform', data.platform);
             div.innerHTML = msgHtml;
             
             div.onclick = () => {
@@ -194,6 +204,7 @@
                 focusLog.innerHTML = '';
                 const firstMsg = document.createElement('div');
                 firstMsg.className = 'msg';
+                firstMsg.setAttribute('data-platform', data.platform);
                 firstMsg.innerHTML = msgHtml;
                 firstMsg.onclick = () => socket.emit('feature-msg', data);
                 focusLog.prepend(firstMsg);
@@ -206,6 +217,7 @@
             if (focusedUser && data.user.toLowerCase() === focusedUser.toLowerCase()) {
                 const fDiv = document.createElement('div');
                 fDiv.className = 'msg';
+                fDiv.setAttribute('data-platform', data.platform);
                 fDiv.innerHTML = msgHtml;
                 fDiv.onclick = () => socket.emit('feature-msg', data);
                 focusLog.prepend(fDiv);
