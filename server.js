@@ -45,20 +45,84 @@ function loadConfig() {
     } catch (e) {}
 }
 
-// --- ASSET LOADING (7TV) ---
+// --- ASSET LOADING (3RD PARTY EMOTES) ---
 async function loadAssets(channel) {
     emoteMap = {}; badgeMap = {};
     if (!channel) return;
     try {
-        const res = await fetch(`https://7tv.io/v3/users/twitch/${channel}`).catch(() => null);
-        if (res && res.ok) {
-            const data = await res.json();
-            if (data.emote_set?.emotes) {
-                data.emote_set.emotes.forEach(e => {
-                    emoteMap[e.name] = `https://cdn.7tv.app/emote/${e.id}/3x.webp`;
-                });
+        // Resolve Twitch ID
+        const idRes = await fetch(`https://decapi.me/twitch/id/${channel}`).catch(() => null);
+        const twitchId = idRes && idRes.ok ? await idRes.text() : null;
+
+        // 7TV Global
+        try {
+            const res = await fetch('https://7tv.io/v3/emote-sets/global');
+            if (res.ok) {
+                const data = await res.json();
+                if (data.emotes) data.emotes.forEach(e => { emoteMap[e.name] = `https://cdn.7tv.app/emote/${e.id}/3x.webp`; });
             }
+        } catch(e) {}
+
+        // 7TV Channel
+        try {
+            const res = await fetch(`https://7tv.io/v3/users/twitch/${twitchId || channel}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.emote_set?.emotes) data.emote_set.emotes.forEach(e => { emoteMap[e.name] = `https://cdn.7tv.app/emote/${e.id}/3x.webp`; });
+            }
+        } catch(e) {}
+
+        // BTTV Global
+        try {
+            const res = await fetch('https://api.betterttv.net/3/cached/emotes/global');
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data)) data.forEach(e => { emoteMap[e.code] = `https://cdn.betterttv.net/emote/${e.id}/3x`; });
+            }
+        } catch(e) {}
+
+        if (twitchId) {
+            // BTTV Channel
+            try {
+                const res = await fetch(`https://api.betterttv.net/3/cached/users/twitch/${twitchId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.channelEmotes) data.channelEmotes.forEach(e => { emoteMap[e.code] = `https://cdn.betterttv.net/emote/${e.id}/3x`; });
+                    if (data.sharedEmotes) data.sharedEmotes.forEach(e => { emoteMap[e.code] = `https://cdn.betterttv.net/emote/${e.id}/3x`; });
+                }
+            } catch(e) {}
+
+            // FFZ Global
+            try {
+                const res = await fetch('https://api.frankerfacez.com/v1/set/global');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.sets) {
+                        Object.values(data.sets).forEach(set => {
+                            if (set.emoticons) set.emoticons.forEach(e => {
+                                emoteMap[e.name] = e.urls["4"] || e.urls["2"] || e.urls["1"];
+                            });
+                        });
+                    }
+                }
+            } catch(e) {}
+
+            // FFZ Channel
+            try {
+                const res = await fetch(`https://api.frankerfacez.com/v1/room/id/${twitchId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.sets) {
+                        Object.values(data.sets).forEach(set => {
+                            if (set.emoticons) set.emoticons.forEach(e => {
+                                emoteMap[e.name] = e.urls["4"] || e.urls["2"] || e.urls["1"];
+                            });
+                        });
+                    }
+                }
+            } catch(e) {}
         }
+
         io.emit('init-assets', { emotes: emoteMap, badges: badgeMap });
     } catch (e) { console.log("Asset load skipped."); }
 }
@@ -90,7 +154,12 @@ function connectYouTube(id) {
         ytChat = new LiveChat({ channelId: id });
         ytChat.on("chat", (item) => {
             const txt = item.message.map(m => m.text || '').join('');
-            io.emit('new-message', { platform: 'youtube', user: item.author.name, color: '#ff0000', badges: {}, text: txt });
+            const elements = item.message.map(m => {
+                if (m.text) return { type: 'text', text: m.text };
+                if (m.url) return { type: 'emote', url: m.url, text: m.alt || m.emojiText || '' };
+                return { type: 'text', text: '' };
+            });
+            io.emit('new-message', { platform: 'youtube', user: item.author.name, color: '#ff0000', badges: {}, text: txt, elements: elements });
         });
         ytChat.on("error", () => { ytStatus = 'offline'; io.emit('status-update', { platform: 'youtube', status: 'offline' }); });
         ytChat.start().then(() => { ytStatus = 'online'; io.emit('status-update', { platform: 'youtube', status: 'online' }); })

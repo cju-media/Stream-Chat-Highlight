@@ -177,7 +177,7 @@
         socket.on('new-message', (data) => {
             if (siteFilter.value !== 'all' && data.platform !== siteFilter.value) return;
 
-            const msgHtml = `<span class="platform-tag tag-${data.platform}">${data.platform[0]}</span><span class="username" style="color:${data.color}">${data.user}:</span><span>${parse(data.text, data.emotes)}</span>`;
+            const msgHtml = `<span class="platform-tag tag-${data.platform}">${data.platform[0]}</span><span class="username" style="color:${data.color}">${data.user}:</span><span>${parseMessage(data)}</span>`;
             
             const div = document.createElement('div');
             div.className = 'msg';
@@ -213,7 +213,16 @@
             }
         });
 
-        function parse(text, twitchEmotes) {
+        function parseMessage(data) {
+            if (data.platform === 'youtube' && data.elements) {
+                return data.elements.map(m => {
+                    if (m.type === 'emote') return `<img src="${m.url}" class="emote" alt="${m.text}">`;
+                    return m.text.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+                }).join('');
+            }
+
+            let text = data.text;
+            let twitchEmotes = data.emotes;
             const twitchMap = {};
             if (twitchEmotes) {
                 Object.keys(twitchEmotes).forEach(id => twitchEmotes[id].forEach(range => {

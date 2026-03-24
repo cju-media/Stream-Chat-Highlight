@@ -39,7 +39,16 @@
             return html;
         }
 
-        function parse(text, twitchEmotes) {
+        function parseMessage(data) {
+            if (data.platform === 'youtube' && data.elements) {
+                return data.elements.map(m => {
+                    if (m.type === 'emote') return `<img src="${m.url}" class="emote" alt="${m.text}">`;
+                    return m.text.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+                }).join('');
+            }
+
+            let text = data.text;
+            let twitchEmotes = data.emotes;
             const twitchMap = {};
             if (twitchEmotes) {
                 Object.keys(twitchEmotes).forEach(id => {
@@ -58,7 +67,7 @@
 
         socket.on('show-feature', (data) => {
             box.style.borderLeftColor = data.platform === 'twitch' ? '#9147ff' : '#ff0000';
-            box.innerHTML = `${getBadgesHtml(data.badges)}<span class="username" style="color:${data.color}">${data.user}:</span><span>${parse(data.text, data.emotes)}</span>`;
+            box.innerHTML = `${getBadgesHtml(data.badges)}<span class="username" style="color:${data.color}">${data.user}:</span><span>${parseMessage(data)}</span>`;
             box.classList.add('visible');
         });
 
