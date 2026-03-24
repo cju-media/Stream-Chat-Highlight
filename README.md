@@ -57,6 +57,3 @@ To modify the source code or rebuild the binaries:
 3. **Compilation**: Execute `npx pkg .` to generate new binaries.
 *Note: The project configuration is set to include all node_modules as assets to ensure the virtual snapshot filesystem functions correctly across different environments.*
 
----
-
-**Would you like me to generate a separate "Quick Start" text file specifically for the Linux version to include in the distribution folder?**
